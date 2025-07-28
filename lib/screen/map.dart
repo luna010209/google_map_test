@@ -61,34 +61,6 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _initializeMarkers() {
-    final staticMarkers = MapPoints.points
-        .map(
-          (point) => Marker(
-        markerId: MarkerId(point.toString()),
-        position: point,
-        onTap: () => _launchMapUrl(point),
-      ),
-    )
-        .toSet();
-
-    setState(() {
-      _markers.addAll(staticMarkers);
-    });
-  }
-
-
-  void _launchMapUrl(LatLng destination) async {
-    final url =
-        'https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
-
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch $url';
-    }
-  }
-
   void toggleTracking() async {
     if (_isTracking) {
       // Stop tracking
@@ -110,6 +82,33 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _isTracking = true;
       });
+    }
+  }
+
+  void _initializeMarkers() {
+    final staticMarkers = MapPoints.points
+        .map(
+          (point) => Marker(
+        markerId: MarkerId(point.toString()),
+        position: point,
+        onTap: () => _launchMapUrl(point),
+      ),
+    )
+        .toSet();
+
+    setState(() {
+      _markers.addAll(staticMarkers);
+    });
+  }
+
+  void _launchMapUrl(LatLng destination) async {
+    final url =
+        'https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
+
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
     }
   }
 
