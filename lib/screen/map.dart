@@ -21,7 +21,7 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> _markers = {};
   LatLng? _initialPosition;
   Map<int, List<LatLng>> clustersMap = {};
-  int activeCluster = 0;
+  int activeCluster = 5;
   bool _isTracking = false;
   final DistanceTracker _distanceTracker = DistanceTracker();
   StreamSubscription<Position>? _positionStreamSubscription;
@@ -149,24 +149,15 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _setClusterMarkers(int clusterIndex) {
-    final clusterPoints = clustersMap[clusterIndex] ?? [];
-    final newMarkers = clusterPoints.map((point) {
-      final color = clusterColors[clusterIndex % clusterColors.length];
-      return Marker(
-        markerId: MarkerId(point.toString()),
-        position: point,
-        icon: color,
-        onTap: () => _launchMapUrl(point),
-      );
-    }).toSet();
+    final clusterPoints;
+    if (clusterIndex==-1) clusterPoints = clustersMap;
+    else clusterPoints = clustersMap[clusterIndex] ?? [];
 
     setState(() {
-      _markers = newMarkers;
       if (clusterPoints.isNotEmpty) {
-        _initialPosition = clusterPoints.first;
-        _mapController.animateCamera(
-          CameraUpdate.newLatLng(clusterPoints.first),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          cameraFocus(clusterPoints, _mapController);
+        });
       }
     });
   }
@@ -180,7 +171,7 @@ class _MapScreenState extends State<MapScreen> {
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _initialPosition ?? const LatLng(37.5665, 126.9780), // Focus on the first point
-              zoom: 14,
+              zoom: 16,
             ),
             markers: _markers,
             onMapCreated: (controller) {
@@ -198,25 +189,46 @@ class _MapScreenState extends State<MapScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: List.generate(clustersMap.length, (index){
-                  return Padding(
+                children: [
+                  Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: activeCluster ==index?
-                            Colors.blue : Colors.grey,
+                        backgroundColor: activeCluster==5?
+                        Colors.blue : Colors.grey,
                       ),
                       onPressed: () {
                         setState(() {
-                          activeCluster = index;
+                          activeCluster = 5;
                           _setClusterMarkers(activeCluster);
                         });
                       },
-                      child: Text('Cluster ${index+1}'),
+                      child: Text('All Clusters'),
                     ),
-                  );
-                }),
-              ),
+                  ),
+                  Row(
+                    children: List.generate(clustersMap.length-1 , (index){
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: activeCluster==index?
+                            Colors.blue : Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              activeCluster = index;
+                              _setClusterMarkers(activeCluster);
+                            });
+                          },
+                          child: Text('Cluster ${index+1}'),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              )
+
             )
           ),
           Positioned(

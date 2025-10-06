@@ -22,7 +22,8 @@ Future<List<LatLng>> fetchMapPoints() async {
 
   print("Length List: ${data.length}");
 
-  final List<LatLng> latLngPoints = data.sublist(20, 50)
+  final List<LatLng> latLngPoints = data
+    // .sublist(0,200)
     .map((json)=> MapPointsMapper.fromJson(json))
     .take(200)
     .map((e) => LatLng(e.latitude, e.longitude))

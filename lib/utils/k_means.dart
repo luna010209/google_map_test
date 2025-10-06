@@ -19,7 +19,9 @@ Future<Map<int, List<LatLng>>> kmeansClustering(int k) async{
     seed: 42,
   );
 
-  final Map<int, List<LatLng>> clustersMap = {};
+  final Map<int, List<LatLng>> clustersMap = {
+    k: points
+  };
   for (int i=0; i < points.length; i++){
     final clusterIndex = result.clusters[i];
     clustersMap.putIfAbsent(clusterIndex, () => []);

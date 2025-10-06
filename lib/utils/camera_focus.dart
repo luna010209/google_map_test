@@ -25,6 +25,6 @@ void cameraFocus(List<LatLng> points, GoogleMapController? mapController) {
 
   // Animate camera to fit the bounds with padding
   mapController.animateCamera(
-    CameraUpdate.newLatLngBounds(bounds, 80),
+    CameraUpdate.newLatLngBounds(bounds, 50),
   );
 }
