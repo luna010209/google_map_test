@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_map_test/components/distance_tracking.dart';
 import 'package:google_map_test/utils/camera_focus.dart';
+import 'package:google_map_test/utils/k_means.dart';
 import 'package:google_map_test/utils/map_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,9 +20,19 @@ class _MapScreenState extends State<MapScreen> {
   late GoogleMapController _mapController;
   Set<Marker> _markers = {};
   LatLng? _initialPosition;
+  Map<int, List<LatLng>> clustersMap = {};
+  int activeCluster = 0;
   bool _isTracking = false;
   final DistanceTracker _distanceTracker = DistanceTracker();
   StreamSubscription<Position>? _positionStreamSubscription;
+
+  final List<BitmapDescriptor> clusterColors = [
+    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+  ];
 
   @override
   void initState() {
@@ -99,29 +110,35 @@ class _MapScreenState extends State<MapScreen> {
 
   void _initializeMarkers() async {
     try {
-      final fetchPoints = await fetchMapPoints();
+      clustersMap = await kmeansClustering(5);
 
-      final allPoints = fetchPoints.map((e)=>
-      LatLng(e.latitude, e.longitude)).toList();
+      print("All points: $clustersMap");
 
-      print("All points: $allPoints");
+      if (clustersMap.isEmpty) return;
 
-      if (allPoints.isEmpty) return;
+      final Set<Marker> newMarkers = {};
 
-      final fetchedMarkers = allPoints.map(
-          (point)=> Marker(
+      clustersMap.forEach((index, points) {
+        final color = clusterColors[index % clusterColors.length];
+        for (LatLng point in points){
+          newMarkers.add(
+            Marker(
               markerId: MarkerId(point.toString()),
-            position: point,
-            onTap: () => _launchMapUrl(point),
-          ),
-      ).toSet();
-
-      setState(() {
-        _markers.addAll(fetchedMarkers);
-        _initialPosition = allPoints.first;
+              position: point,
+              icon: color,
+              onTap: () => _launchMapUrl(point)
+            )
+          );
+        }
       });
 
-      if (_mapController != null && allPoints.isNotEmpty){
+      setState(() {
+        _markers.addAll(newMarkers);
+        _initialPosition = clustersMap[0]!.first;
+      });
+
+      if (_mapController != null && clustersMap.isNotEmpty){
+        final allPoints = clustersMap.values.expand((e) => e).toList();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           cameraFocus(allPoints, _mapController);
         });
@@ -129,6 +146,29 @@ class _MapScreenState extends State<MapScreen> {
     } catch (e){
       print("❌ Failed to initialize markers: $e");
     }
+  }
+
+  void _setClusterMarkers(int clusterIndex) {
+    final clusterPoints = clustersMap[clusterIndex] ?? [];
+    final newMarkers = clusterPoints.map((point) {
+      final color = clusterColors[clusterIndex % clusterColors.length];
+      return Marker(
+        markerId: MarkerId(point.toString()),
+        position: point,
+        icon: color,
+        onTap: () => _launchMapUrl(point),
+      );
+    }).toSet();
+
+    setState(() {
+      _markers = newMarkers;
+      if (clusterPoints.isNotEmpty) {
+        _initialPosition = clusterPoints.first;
+        _mapController.animateCamera(
+          CameraUpdate.newLatLng(clusterPoints.first),
+        );
+      }
+    });
   }
 
   @override
@@ -150,6 +190,34 @@ class _MapScreenState extends State<MapScreen> {
                 cameraFocus(_markers.map((m)=> m.position).toList(), _mapController);
               });
             },
+          ),
+          Positioned(
+            top: 10,
+            left: 10,
+            right: 10,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(clustersMap.length, (index){
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: activeCluster ==index?
+                            Colors.blue : Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          activeCluster = index;
+                          _setClusterMarkers(activeCluster);
+                        });
+                      },
+                      child: Text('Cluster ${index+1}'),
+                    ),
+                  );
+                }),
+              ),
+            )
           ),
           Positioned(
             bottom: 20,
