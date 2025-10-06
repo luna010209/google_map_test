@@ -18,6 +18,7 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   late GoogleMapController _mapController;
   Set<Marker> _markers = {};
+  LatLng? _initialPosition;
   bool _isTracking = false;
   final DistanceTracker _distanceTracker = DistanceTracker();
   StreamSubscription<Position>? _positionStreamSubscription;
@@ -85,22 +86,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _initializeMarkers() {
-    final staticMarkers = MapPoints.points
-        .map(
-          (point) => Marker(
-        markerId: MarkerId(point.toString()),
-        position: point,
-        onTap: () => _launchMapUrl(point),
-      ),
-    )
-        .toSet();
-
-    setState(() {
-      _markers.addAll(staticMarkers);
-    });
-  }
-
   void _launchMapUrl(LatLng destination) async {
     final url =
         'https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}&travelmode=driving';
@@ -112,6 +97,40 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _initializeMarkers() async {
+    try {
+      final fetchPoints = await fetchMapPoints();
+
+      final allPoints = fetchPoints.map((e)=>
+      LatLng(e.latitude, e.longitude)).toList();
+
+      print("All points: $allPoints");
+
+      if (allPoints.isEmpty) return;
+
+      final fetchedMarkers = allPoints.map(
+          (point)=> Marker(
+              markerId: MarkerId(point.toString()),
+            position: point,
+            onTap: () => _launchMapUrl(point),
+          ),
+      ).toSet();
+
+      setState(() {
+        _markers.addAll(fetchedMarkers);
+        _initialPosition = allPoints.first;
+      });
+
+      if (_mapController != null && allPoints.isNotEmpty){
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          cameraFocus(allPoints, _mapController);
+        });
+      }
+    } catch (e){
+      print("❌ Failed to initialize markers: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,7 +139,7 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: MapPoints.points[0], // Focus on the first point
+              target: _initialPosition ?? const LatLng(37.5665, 126.9780), // Focus on the first point
               zoom: 14,
             ),
             markers: _markers,
@@ -128,7 +147,7 @@ class _MapScreenState extends State<MapScreen> {
               _mapController = controller;
 
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                cameraFocus(MapPoints.points, _mapController);
+                cameraFocus(_markers.map((m)=> m.position).toList(), _mapController);
               });
             },
           ),

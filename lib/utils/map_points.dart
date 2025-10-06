@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 
 Future<List<LatLng>> fetchMapPoints() async {
   final response = await http.get(
-    Uri.parse("${ApiConfig.baseUrl}/"),
+    Uri.parse("${ApiConfig.baseUrl}/v1/collection"),
     headers: {
       "Authorization": "Bearer ${ApiConfig.apiToken}",
       "Content-Type": "application/json"
@@ -20,7 +20,9 @@ Future<List<LatLng>> fetchMapPoints() async {
 
   final List<dynamic> data = jsonDecode(response.body);
 
-  final List<LatLng> latLngPoints = data
+  print("Length List: ${data.length}");
+
+  final List<LatLng> latLngPoints = data.sublist(20, 50)
     .map((json)=> MapPointsMapper.fromJson(json))
     .take(200)
     .map((e) => LatLng(e.latitude, e.longitude))
