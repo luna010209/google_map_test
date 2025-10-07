@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_map_test/components/distance_tracking.dart';
+import 'package:google_map_test/screen/widget/point_cluster.dart';
 import 'package:google_map_test/utils/camera_focus.dart';
 import 'package:google_map_test/utils/k_means.dart';
 import 'package:google_map_test/utils/map_points.dart';
@@ -21,6 +22,7 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> _markers = {};
   LatLng? _initialPosition;
   Map<int, List<LatLng>> clustersMap = {};
+  int k=5;
   int activeCluster = 5;
   bool _isTracking = false;
   final DistanceTracker _distanceTracker = DistanceTracker();
@@ -110,7 +112,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _initializeMarkers() async {
     try {
-      clustersMap = await kmeansClustering(5);
+      clustersMap = await kmeansClustering(k);
 
       print("All points: $clustersMap");
 
@@ -182,54 +184,12 @@ class _MapScreenState extends State<MapScreen> {
               });
             },
           ),
-          Positioned(
-            top: 10,
-            left: 10,
-            right: 10,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: activeCluster==5?
-                        Colors.blue : Colors.grey,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          activeCluster = 5;
-                          _setClusterMarkers(activeCluster);
-                        });
-                      },
-                      child: Text('All Clusters'),
-                    ),
-                  ),
-                  Row(
-                    children: List.generate(clustersMap.length-1 , (index){
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: activeCluster==index?
-                            Colors.blue : Colors.grey,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              activeCluster = index;
-                              _setClusterMarkers(activeCluster);
-                            });
-                          },
-                          child: Text('Cluster ${index+1}'),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              )
-
-            )
+          PointCluster(
+            k: k,
+            clusterMap: clustersMap,
+            onClusterSelected: (index) {
+              _setClusterMarkers(index);
+            }
           ),
           Positioned(
             bottom: 20,

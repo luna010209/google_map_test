@@ -20,7 +20,7 @@ Future<Map<int, List<LatLng>>> kmeansClustering(int k) async{
   );
 
   final Map<int, List<LatLng>> clustersMap = {
-    k: points
+    -1: points
   };
   for (int i=0; i < points.length; i++){
     final clusterIndex = result.clusters[i];
